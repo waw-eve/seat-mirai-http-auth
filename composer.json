@@ -1,13 +1,19 @@
 {
-    "name": "author/your-package",
-    "description": "Your package description",
+    "name": "kagurazakanyaa/seat-mirai-http-auth",
+    "description": "This plugin provide an extension to the standard SeAT character Job which handle automatic graduation for QQ user",
     "license": "GPL-3.0-or-later",
+    "type": "seat-plugin",
+    "keywords": [
+        "seat",
+        "eve-online"
+    ],
     "authors": [
         {
-            "name": "Leon Jacobs",
-            "email": "leonja511@gmail.com"
+            "name": "Kagurazaka Nyaa",
+            "email": "developer@waw-eve.com"
         }
     ],
+    "homepage": "https://github.com/waw-eve/seat-mirai-http-auth",
     "autoload": {
         "psr-4": {
             "Author\\Seat\\YourPackage\\": "src/"
@@ -18,7 +24,8 @@
     "require": {
         "php": "^7.3",
         "laravel/framework": "^6.2",
-        "eveseat/web": "^4.0"
+        "eveseat/web": "^4.0",
+        "warlof/seat-connector": "^2.1"
     },
     "require-dev": {
         "orchestra/testbench": "^4.0",
