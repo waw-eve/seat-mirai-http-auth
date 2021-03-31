@@ -1,0 +1,34 @@
+{
+    "name": "author/your-package",
+    "description": "Your package description",
+    "license": "GPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Leon Jacobs",
+            "email": "leonja511@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Author\\Seat\\YourPackage\\": "src/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "php": "^7.3",
+        "laravel/framework": "^6.2",
+        "eveseat/web": "^4.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^4.0",
+        "orchestra/database": "^4.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Author\\Seat\\YourPackage\\WebServiceProvider"
+            ]
+        }
+    }
+}
