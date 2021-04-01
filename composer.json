@@ -16,7 +16,7 @@
     "homepage": "https://github.com/waw-eve/seat-mirai-http-auth",
     "autoload": {
         "psr-4": {
-            "Author\\Seat\\YourPackage\\": "src/"
+            "Warlof\\Seat\\Connector\\Drivers\\Mirai\\": "src/"
         }
     },
     "minimum-stability": "dev",
@@ -34,7 +34,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Author\\Seat\\YourPackage\\WebServiceProvider"
+                "Warlof\\Seat\\Connector\\Drivers\\Mirai\\MiraiConnectorServiceProvider"
             ]
         }
     }
