@@ -2,6 +2,10 @@
 
 # SeAT Mirai Auth
 
+This plugin provide an extension to the standard SeAT character Job which handle automatic graduation for QQ user.
+
+This plugin is modify from [warlof/seat-teamspeak](https://github.com/warlof/seat-teamspeak).
+
 ## Installation
 
 ### for non-Docker
