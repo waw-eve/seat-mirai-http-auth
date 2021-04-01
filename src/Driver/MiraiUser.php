@@ -95,7 +95,8 @@ class MiraiUser implements IUser
      */
     public function setName(string $name): bool
     {
-        return false;
+        $this->nickname = $name;
+        return MiraiHttpClient::getInstance()->setMiraiUserName($this);
     }
 
     /**
@@ -106,7 +107,7 @@ class MiraiUser implements IUser
     {
         if ($this->server_groups->isEmpty()) {
             try {
-                $this->server_groups = collect(MiraiHttpClient::getInstance()->getUserServerGroups($this));
+                $this->server_groups = collect(MiraiHttpClient::getInstance()->getMiraiUserServerGroups($this));
             } catch (MiraiException $e) {
                 logger()->error(sprintf('[seat-connector][mirai] %d : %s', $e->getCode(), $e->getMessage()));
                 throw new DriverException($e->getMessage(), $e->getCode(), $e);
@@ -125,13 +126,6 @@ class MiraiUser implements IUser
         if (in_array($group, $this->getSets()))
             return;
 
-        try {
-            MiraiHttpClient::getInstance()->addSpeakerToServerGroup($this, $group);
-        } catch (MiraiException $e) {
-            logger()->error(sprintf('[seat-connector][mirai] %d : %s', $e->getCode(), $e->getMessage()));
-            throw new DriverException($e->getMessage(), $e->getCode(), $e);
-        }
-
         $this->server_groups->put($group->getId(), $group);
     }
 
@@ -145,7 +139,7 @@ class MiraiUser implements IUser
             return;
 
         try {
-            MiraiHttpClient::getInstance()->removeSpeakerFromServerGroup($this, $group);
+            MiraiHttpClient::getInstance()->removeMiraiUserFromServerGroup($this, $group);
         } catch (MiraiException $e) {
             logger()->error(sprintf('[seat-connector][mirai] %d : %s', $e->getCode(), $e->getMessage()));
             throw new DriverException($e->getMessage(), $e->getCode(), $e);
@@ -160,10 +154,9 @@ class MiraiUser implements IUser
      */
     public function hydrate(array $attributes)
     {
-        $this->id        = array_key_exists('cldbid', $attributes) ?
-            $attributes['cldbid'] : $attributes['client_database_id'];
-        $this->unique_id = $attributes['client_unique_identifier'];
-        $this->nickname  = $attributes['client_nickname'];
+        $this->id        = $attributes['id'];
+        $this->unique_id = 'mirai_' + $this->id;
+        $this->nickname  = $attributes['memberName'];
 
         return $this;
     }

@@ -42,9 +42,8 @@ class GuzzleFetcher implements IFetcher
      * GuzzleFetcher constructor.
      *
      * @param string $base_uri
-     * @param string $token
      */
-    public function __construct(string $base_uri, string $token)
+    public function __construct(string $base_uri)
     {
         $stack = HandlerStack::create();
         $stack->push(new RateLimiterMiddleware());
@@ -54,7 +53,6 @@ class GuzzleFetcher implements IFetcher
             'headers'  => [
                 'Content-Type' => 'application/json',
                 'User-Agent'   => sprintf('kagurazakanyaa@seat-mirai-connector/%s GitHub SeAT', config('mirai-connector.config.version')),
-                'X-API-KEY'    => $token,
             ],
             'handler'  => $stack,
         ]);

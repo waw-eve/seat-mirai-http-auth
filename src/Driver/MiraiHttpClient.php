@@ -1,16 +1,16 @@
 <?php
 
 /**
- * This file is part of SeAT Teamspeak Connector.
+ * This file is part of SeAT Mirai Connector.
  *
  * Copyright (C) 2021  Kagurazaka Nyaa <developer@waw-eve.com>
  *
- * SeAT Teamspeak Connector  is free software: you can redistribute it and/or modify
+ * SeAT Mirai Connector  is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * SeAT Teamspeak Connector is distributed in the hope that it will be useful,
+ * SeAT Mirai Connector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -52,7 +52,7 @@ class MiraiHttpClient implements IClient
     /**
      * @var \Warlof\Seat\Connector\Drivers\IUser[]
      */
-    private $speakers;
+    private $mirai_users;
 
     /**
      * @var \Warlof\Seat\Connector\Drivers\ISet[]
@@ -65,16 +65,6 @@ class MiraiHttpClient implements IClient
     private $client;
 
     /**
-     * @var int
-     */
-    private $instance_id;
-
-    /**
-     * @var int
-     */
-    private $server_port;
-
-    /**
      * @var string
      */
     private $api_base_uri;
@@ -82,7 +72,12 @@ class MiraiHttpClient implements IClient
     /**
      * @var string
      */
-    private $api_key;
+    private $session_key;
+
+    /**
+     * @var string
+     */
+    private $bot_qq;
 
     /**
      * MiraiHttpClient constructor.
@@ -91,16 +86,21 @@ class MiraiHttpClient implements IClient
      */
     public function __construct(array $parameters)
     {
-        $this->server_port    = $parameters['server_port'];
-        $this->instance_id    = $parameters['instance_id'] ?? 0;
         $this->api_base_uri   = $parameters['api_base_uri'];
-        $this->api_key        = $parameters['api_key'];
+        $this->bot_qq         = $parameters['bot_qq'];
 
-        $this->speakers      = collect();
-        $this->server_groups = collect();
+        $this->mirai_users    = collect();
+        $this->server_groups  = collect();
 
-        $fetcher = config('teamspeak.config.fetcher');
-        $this->client = new $fetcher($this->api_base_uri, $this->api_key);
+        $fetcher = config('mirai.config.fetcher');
+        $this->client = new $fetcher($this->api_base_uri);
+
+        $this->session_key = $this->sendCall('POST', '/auth', ['authKey' => $parameters['api_key']])['session'];
+    }
+
+    public function __destruct()
+    {
+        $this->sendCall('POST', '/release', ['sessionKey' => $this->session_key, 'qq' => $this->bot_qq]);
     }
 
     /**
@@ -120,26 +120,19 @@ class MiraiHttpClient implements IClient
             if (is_null($settings) || !is_object($settings))
                 throw new DriverSettingsException('The Driver has not been configured yet.');
 
-            if (!property_exists($settings, 'server_host') || empty($settings->server_host))
-                throw new DriverSettingsException('Parameter server_host is missing.');
-
-            if (!property_exists($settings, 'server_port') || is_null($settings->server_port) || $settings->server_port == 0)
-                throw new DriverSettingsException('Parameter server_port is missing.');
-
             if (!property_exists($settings, 'api_base_uri') || empty($settings->api_base_uri))
                 throw new DriverSettingsException('Parameter api_base_uri is missing.');
 
             if (!property_exists($settings, 'api_key') || empty($settings->api_key))
                 throw new DriverSettingsException('Parameter api_key is missing.');
 
-            if (!property_exists($settings, 'instance_id') || is_null($settings->instance_id) || $settings->instance_id == 0)
-                throw new DriverSettingsException('Parameter instance_id is missing.');
+            if (!property_exists($settings, 'bot_qq') || is_null($settings->bot_qq))
+                throw new DriverSettingsException('Parameter bot_qq is missing.');
 
             self::$instance = new MiraiHttpClient([
-                'server_port'  => $settings->server_port,
-                'instance_id'  => $settings->instance_id ?? 0,
                 'api_base_uri' => $settings->api_base_uri,
                 'api_key'      => $settings->api_key,
+                'bot_qq'       => $settings->bot_qq,
             ]);
         }
 
@@ -152,16 +145,16 @@ class MiraiHttpClient implements IClient
      */
     public function getUsers(): array
     {
-        if ($this->speakers->isEmpty()) {
+        if ($this->mirai_users->isEmpty()) {
             try {
-                $this->seedSpeakers();
+                $this->seedMiraiUsers();
             } catch (MiraiException $e) {
                 logger()->error(sprintf('[seat-connector][mirai] %d: %s', $e->getCode(), $e->getMessage()));
                 throw new DriverException($e->getMessage(), $e->getCode(), $e);
             }
         }
 
-        return $this->speakers->toArray();
+        return $this->mirai_users->toArray();
     }
 
     /**
@@ -190,16 +183,16 @@ class MiraiHttpClient implements IClient
      */
     public function getUser(string $id): ?IUser
     {
-        if ($this->speakers->isEmpty()) {
+        if ($this->mirai_users->isEmpty()) {
             try {
-                $this->seedSpeakers();
+                $this->seedMiraiUsers();
             } catch (MiraiException $e) {
                 logger()->error(sprintf('[seat-connector][mirai] %d : %s', $e->getCode(), $e->getMessage()));
                 throw new DriverException($e->getMessage(), $e->getCode(), $e);
             }
         }
 
-        $user = $this->speakers->get($id);
+        $user = $this->mirai_users->get($id);
 
         if (is_null($user)) {
             try {
@@ -211,13 +204,14 @@ class MiraiHttpClient implements IClient
 
                 $client_info = Arr::first($response);
 
-                $speaker = new MiraiUser([
+                // TODO 实现获取用户 https://github.com/project-mirai/mirai-api-http/blob/master/docs/API.md#%E8%8E%B7%E5%8F%96%E7%BE%A4%E6%88%90%E5%91%98%E5%88%97%E8%A1%A8
+                $mirai_user = new MiraiUser([
                     'client_database_id' => $client_info->client_database_id,
                     'client_unique_identifier' => $client_info->client_unique_identifier,
                     'client_nickname' => $client_info->client_nickname,
                 ]);
 
-                $this->speakers->put($speaker->getClientId(), $speaker);
+                $this->mirai_users->put($mirai_user->getClientId(), $mirai_user);
             } catch (MiraiException $e) {
                 logger()->error(sprintf('[seat-connector][mirai] %d : %s', $e->getCode(), $e->getMessage()));
 
@@ -233,57 +227,6 @@ class MiraiHttpClient implements IClient
         }
 
         return $user;
-    }
-
-    /**
-     * @param string $nickname
-     * @return \Warlof\Seat\Connector\Drivers\Mirai\Driver\MiraiUser
-     * @throws \Warlof\Seat\Connector\Drivers\Mirai\Exceptions\MiraiException
-     * @throws \Warlof\Seat\Connector\Exceptions\InvalidDriverIdentityException
-     */
-    public function findUserByName(string $nickname)
-    {
-        try {
-            // scope: manage_scope
-            $response = $this->sendCall('GET', '/{instance}/clientdbfind', [
-                'pattern' => $nickname,
-                'instance' => $this->instance_id,
-            ]);
-
-            $id = Arr::first($response)->cldbid;
-
-            // scope: manage_scope
-            $response = $this->sendCall('GET', '/{instance}/clientdbinfo', [
-                'cldbid' => $id,
-                'instance' => $this->instance_id,
-            ]);
-        } catch (MiraiException $e) {
-            if ($e->getCode() == 1281)
-                throw new InvalidDriverIdentityException(
-                    sprintf('Unable to find user %s', $nickname),
-                    $e->getCode(),
-                    $e
-                );
-
-            if ($e->getCode() == 512)
-                throw new InvalidDriverIdentityException(
-                    sprintf('Unable to find user with Client ID %d', $id),
-                    $e->getCode(),
-                    $e
-                );
-
-            throw $e;
-        }
-
-        $identity = Arr::first($response);
-
-        $speaker = new MiraiUser([
-            'client_database_id'       => $identity->client_database_id,
-            'client_unique_identifier' => $identity->client_unique_identifier,
-            'client_nickname'          => $identity->client_nickname,
-        ]);
-
-        return $speaker;
     }
 
     /**
@@ -306,55 +249,27 @@ class MiraiHttpClient implements IClient
     }
 
     /**
-     * @param int $server_port
-     * @return int
-     * @throws \Warlof\Seat\Connector\Drivers\Mirai\Exceptions\CommandException
-     * @throws \Warlof\Seat\Connector\Drivers\Mirai\Exceptions\LoginException
-     * @throws \Warlof\Seat\Connector\Drivers\Mirai\Exceptions\ServerException
+     * @param \Warlof\Seat\Connector\Drivers\IUser $mirai_user
+     * @return bool
      */
-    public function findInstanceIdByServerPort(int $server_port): int
+    public function setMiraiUserName(IUser $mirai_user)
     {
-        // scope: manage_scope
-        $response = $this->sendCall('GET', '/serverlist');
-
-        $instances = collect($response);
-
-        $instance = $instances->first(function ($instance) use ($server_port) {
-            return intval($instance->virtualserver_port) == $server_port;
-        });
-
-        if (!$instance)
-            throw new ServerException(sprintf('Unable to find a server instance listening on port %d.', $server_port));
-
-        return $instance->virtualserver_id;
+        $groups = $mirai_user->getSets();
+        //TODO 实现修改名称 https://github.com/project-mirai/mirai-api-http/blob/master/docs/API.md#%E4%BF%AE%E6%94%B9%E7%BE%A4%E5%91%98%E8%B5%84%E6%96%99
+        return true;
     }
 
     /**
-     * @param \Warlof\Seat\Connector\Drivers\IUser $speaker
+     * @param \Warlof\Seat\Connector\Drivers\IUser $mirai_user
      * @param \Warlof\Seat\Connector\Drivers\ISet $server_group
      * @throws \Warlof\Seat\Connector\Drivers\Mirai\Exceptions\MiraiException
      */
-    public function addSpeakerToServerGroup(IUser $speaker, ISet $server_group)
+    public function removeMiraiUserFromServerGroup(IUser $mirai_user, ISet $server_group)
     {
-        // scope: manage_scope
-        $this->sendCall('POST', '/{instance}/servergroupaddclient', [
-            'sgid'     => $server_group->getId(),
-            'cldbid'   => $speaker->getClientId(),
-            'instance' => $this->instance_id,
-        ]);
-    }
-
-    /**
-     * @param \Warlof\Seat\Connector\Drivers\IUser $speaker
-     * @param \Warlof\Seat\Connector\Drivers\ISet $server_group
-     * @throws \Warlof\Seat\Connector\Drivers\Mirai\Exceptions\MiraiException
-     */
-    public function removeSpeakerFromServerGroup(IUser $speaker, ISet $server_group)
-    {
-        // scope: manage_scope
+        // TODO 实现移除成员 https://github.com/project-mirai/mirai-api-http/blob/master/docs/API.md#%E7%A7%BB%E9%99%A4%E7%BE%A4%E6%88%90%E5%91%98
         $this->sendCall('POST', '/{instance}/servergroupdelclient', [
             'sgid'     => $server_group->getId(),
-            'cldbid'   => $speaker->getClientId(),
+            'cldbid'   => $mirai_user->getClientId(),
             'instance' => $this->instance_id,
         ]);
     }
@@ -367,29 +282,29 @@ class MiraiHttpClient implements IClient
      */
     public function getServerGroupMembers(ISet $server_group): array
     {
-        // scope: manage_scope
-        $response = $this->sendCall('GET', '/{instance}/servergroupclientlist', [
+        // TODO 实现获取成员列表
+        $response = $this->sendCall('GET', '/memberList?sessionKey=YourSessionKey&target={123456789}', [
             'sgid'     => $server_group->getId(),
             'instance' => $this->instance_id,
         ]);
 
-        $speakers = [];
+        $mirai_users = [];
 
         foreach ($response as $element) {
-            $speakers[] = $this->getUser($element->cldbid);
+            $mirai_users[] = $this->getUser($element->cldbid);
         }
 
-        return $speakers;
+        return $mirai_users;
     }
 
     /**
-     * @param \Warlof\Seat\Connector\Drivers\IUser $speaker
+     * @param \Warlof\Seat\Connector\Drivers\IUser $mirai_user
      * @return ISet[]
      * @throws \Warlof\Seat\Connector\Drivers\Mirai\Exceptions\CommandException
      */
-    public function getSpeakerServerGroups(IUser $speaker): array
+    public function getMiraiUserServerGroups(IUser $mirai_user): array
     {
-        // scope: manage_scope
+        // TODO 实现根据成员获取组
         $response = $this->sendCall('GET', '/{instance}/serverinfo', [
             'instance' => $this->instance_id,
         ]);
@@ -398,7 +313,7 @@ class MiraiHttpClient implements IClient
 
         // scope: manage_scope
         $response = $this->sendCall('GET', '/{instance}/servergroupsbyclientid', [
-            'cldbid' => $speaker->getClientId(),
+            'cldbid' => $mirai_user->getClientId(),
             'instance' => $this->instance_id,
         ]);
 
@@ -431,6 +346,10 @@ class MiraiHttpClient implements IClient
     {
         $uri = ltrim($endpoint, '/');
         $method = strtoupper($method);
+
+        if ($endpoint != '/auth') {
+            // TODO 实现自动添加sessionKey
+        }
 
         foreach ($arguments as $uri_parameter => $value) {
             if (strpos($uri, sprintf('{%s}', $uri_parameter)) === false)
@@ -481,14 +400,14 @@ class MiraiHttpClient implements IClient
 
         $result = json_decode($response->getBody());
 
-        if ($result->status->code !== 0) {
-            if (in_array($result->status->code, [5122, 5124]))
+        if ($result->code !== 0) {
+            if (in_array($result->code, [1, 2, 3, 4]))
                 throw new LoginException($result->status->message, $result->status->code);
 
             throw new CommandException($result->status->message, $result->status->code);
         }
 
-        return $result->body ?? [];
+        return $result ?? [];
     }
 
     /**
@@ -497,8 +416,9 @@ class MiraiHttpClient implements IClient
      * @throws \Warlof\Seat\Connector\Drivers\Mirai\Exceptions\LoginException
      * @throws \Warlof\Seat\Connector\Drivers\Mirai\Exceptions\ServerException
      */
-    private function seedSpeakers()
+    private function seedMiraiUsers()
     {
+        // TODO 实现初始化获取用户
         $from        = 0;
 
         while (true) {
@@ -510,13 +430,13 @@ class MiraiHttpClient implements IClient
                 ]);
 
                 foreach ($response as $identity) {
-                    $speaker = new MiraiUser([
+                    $mirai_user = new MiraiUser([
                         'cldbid' => $identity->cldbid,
                         'client_unique_identifier' => $identity->client_unique_identifier,
                         'client_nickname' => $identity->client_nickname,
                     ]);
 
-                    $this->speakers->put($speaker->getClientId(), $speaker);
+                    $this->mirai_users->put($mirai_user->getClientId(), $mirai_user);
                     $from++;
                 }
             } catch (MiraiException $e) {
@@ -536,7 +456,7 @@ class MiraiHttpClient implements IClient
      */
     private function seedServerGroups()
     {
-        // scope: manage_scope
+        // TODO 实现初始化获取群组列表 https://github.com/project-mirai/mirai-api-http/blob/master/docs/API.md#%E8%8E%B7%E5%8F%96%E7%BE%A4%E5%88%97%E8%A1%A8
         $response = $this->sendCall('GET', '/{instance}/serverinfo', [
             'instance' => $this->instance_id,
         ]);

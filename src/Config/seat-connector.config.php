@@ -25,16 +25,6 @@ return [
     'client'   => \Warlof\Seat\Connector\Drivers\Mirai\Driver\MiraiHttpClient::class,
     'settings' => [
         [
-            'name'  => 'server_host',
-            'label' => 'seat-connector-mirai::seat.server_host',
-            'type'  => 'text',
-        ],
-        [
-            'name'  => 'server_port',
-            'label' => 'seat-connector-mirai::seat.server_port',
-            'type'  => 'number',
-        ],
-        [
             'name'  => 'api_base_uri',
             'label' => 'seat-connector-mirai::seat.api_base_uri',
             'type'  => 'url',
@@ -42,6 +32,11 @@ return [
         [
             'name'  => 'api_key',
             'label' => 'seat-connector-mirai::seat.api_key',
+            'type'  => 'text',
+        ],
+        [
+            'name'  => 'bot_qq',
+            'label' => 'seat-connector-mirai::seat.bot_qq',
             'type'  => 'text',
         ],
     ],

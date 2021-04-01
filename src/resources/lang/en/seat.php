@@ -20,8 +20,7 @@
  */
 
 return [
-    'server_host'  => '服务器地址',
-    'server_port'  => '服务器端口',
-    'api_base_uri' => 'Api 基础URL',
-    'api_key'      => 'Api 密钥',
+    'api_base_uri' => 'Api Base Uri',
+    'api_key'      => 'Api Key',
+    'bot_qq'       => 'Bot QQ Number',
 ];

@@ -1,16 +1,16 @@
 <?php
 
 /*
- * This file is part of SeAT Teamspeak Connector.
+ * This file is part of SeAT Mirai Connector.
  *
  * Copyright (C) 2021  Kagurazaka Nyaa <developer@waw-eve.com>
  *
- * SeAT Teamspeak Connector  is free software: you can redistribute it and/or modify
+ * SeAT Mirai Connector  is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * SeAT Teamspeak Connector is distributed in the hope that it will be useful,
+ * SeAT Mirai Connector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -102,13 +102,6 @@ class MiraiServerGroup implements ISet
         if (in_array($user, $this->getMembers()))
             return;
 
-        try {
-            MiraiHttpClient::getInstance()->addSpeakerToServerGroup($user, $this);
-        } catch (MiraiException $e) {
-            logger()->error(sprintf('[seat-connector][mirai] %d : %s', $e->getCode(), $e->getMessage()));
-            throw new DriverException($e->getMessage(), $e->getCode(), $e);
-        }
-
         $this->members->put($user->getClientId(), $user);
     }
 
@@ -122,7 +115,7 @@ class MiraiServerGroup implements ISet
             return;
 
         try {
-            MiraiHttpClient::getInstance()->removeSpeakerFromServerGroup($user, $this);
+            MiraiHttpClient::getInstance()->removeMiraiUserFromServerGroup($user, $this);
         } catch (MiraiException $e) {
             logger()->error(sprintf('[seat-connector][mirai] %d : %s', $e->getCode(), $e->getMessage()));
             throw new DriverException($e->getMessage(), $e->getCode(), $e);
@@ -137,7 +130,7 @@ class MiraiServerGroup implements ISet
      */
     public function hydrate(array $attributes)
     {
-        $this->id   = $attributes['sgid'];
+        $this->id   = $attributes['id'];
         $this->name = $attributes['name'];
 
         return $this;
