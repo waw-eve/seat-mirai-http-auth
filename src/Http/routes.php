@@ -1,34 +1,53 @@
 <?php
-/*
-This file is part of SeAT
 
-Copyright (C) 2015 to 2020  Leon Jacobs
+/**
+ * This file is part of SeAT Teamspeak Connector.
+ *
+ * Copyright (C) 2021  Kagurazaka Nyaa <developer@waw-eve.com>
+ *
+ * SeAT Teamspeak Connector  is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * any later version.
+ *
+ * SeAT Teamspeak Connector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along
-with this program; if not, write to the Free Software Foundation, Inc.,
-51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-*/
-
-// Namespace all of the routes for this package.
 Route::group([
-    'namespace'  => 'Author\Seat\YourPackage\Http\Controllers',
+    'namespace'  => 'Warlof\Seat\Connector\Drivers\Mirai\Http\Controllers',
+    'prefix'     => 'seat-connector',
     'middleware' => ['web', 'auth', 'locale'],
 ], function () {
 
-    // Your route definitions go here.
-    Route::get('/your-package/home', [
-        'as'   => 'your-package.home',
-        'uses' => 'HomeController@getHome'
-    ]);
+    Route::group([
+        'prefix' => 'registration',
+    ], function () {
 
+        Route::get('/mirai', [
+            'as'   => 'seat-connector.drivers.mirai.registration',
+            'uses' => 'RegistrationController@redirectToProvider',
+        ]);
+
+        Route::post('/mirai', [
+            'as'   => 'seat-connector.drivers.mirai.registration.callback',
+            'uses' => 'RegistrationController@handleProviderCallback',
+        ]);
+    });
+
+    Route::group([
+        'prefix' => 'settings',
+        'middleware' => 'can:global.superuser',
+    ], function () {
+
+        Route::post('/mirai', [
+            'as' => 'seat-connector.drivers.mirai.settings',
+            'uses' => 'SettingsController@store',
+        ]);
+    });
 });
