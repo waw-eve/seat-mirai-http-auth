@@ -14,7 +14,7 @@ Assume your SeAT root path is `/var/www/seat` and run this code
 
 ```php
 php artisan down
-composer require warlof/seat-teamspeak
+composer require alliancewaw/seat-mirai-http-auth
 
 php artisan vendor:publish --force --all
 php artisan migrate
