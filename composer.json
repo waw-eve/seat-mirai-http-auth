@@ -1,5 +1,5 @@
 {
-    "name": "kagurazakanyaa/seat-mirai-http-auth",
+    "name": "alliancewaw/seat-mirai-http-auth",
     "description": "This plugin provide an extension to the standard SeAT character Job which handle automatic graduation for QQ user",
     "license": "GPL-3.0-or-later",
     "type": "seat-plugin",
