@@ -135,6 +135,6 @@ class MiraiConnectorServiceProvider extends AbstractSeatPlugin
      */
     public function getPackagistVendorName(): string
     {
-        return 'KagurazakaNyaa';
+        return 'alliancewaw';
     }
 }

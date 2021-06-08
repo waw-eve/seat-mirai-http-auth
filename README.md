@@ -23,6 +23,6 @@ php artisan up
 
 ### for Docker
 
-Edit your `.env` file,locate the line `SEAT_PLUGINS` and append `kagurazakanyaa/seat-mirai-http-auth` at the end.
+Edit your `.env` file,locate the line `SEAT_PLUGINS` and append `alliancewaw/seat-mirai-http-auth` at the end.
 
 Then , run `docker-compose up -d` to take effect.

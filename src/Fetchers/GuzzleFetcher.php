@@ -52,7 +52,7 @@ class GuzzleFetcher implements IFetcher
             'base_uri' => $base_uri,
             'headers'  => [
                 'Content-Type' => 'application/json',
-                'User-Agent'   => sprintf('kagurazakanyaa@seat-mirai-connector/%s GitHub SeAT', config('mirai-connector.config.version')),
+                'User-Agent'   => sprintf('alliancewaw@seat-mirai-connector/%s GitHub SeAT', config('mirai-connector.config.version')),
             ],
             'handler'  => $stack,
         ]);
